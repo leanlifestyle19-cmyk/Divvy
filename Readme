@@ -1,1 +1,88 @@
+# 💸 Divvy
 
+> Split bills, not friendships. Offline-first group expense splitter PWA.
+
+---
+
+## What it does
+
+Divvy lets you split group expenses fairly — whether equal or itemised — and calculates exactly who owes who at the end of a trip. Everything is stored on your device, works offline, and exports as JSON for backup.
+
+**Key features:**
+- Create multiple groups (trips, flatmates, events)
+- Add expenses with equal or itemised splits
+- Automatic settlement calculation (minimised transactions)
+- Mark settlements as done
+- Share settlement summary via WhatsApp
+- Export/import groups as JSON
+- Dark mode, ocean palette, installable as PWA
+
+---
+
+## Screens
+
+- **Home** — active groups and recent expenses
+- **Groups** — all groups list
+- **Group Detail** — 3 tabs: Expenses, Balances, Settle Up
+- **Add Expense** — title, amount, paid by, equal or itemised split
+- **New Group** — name, currency, colour, members
+- **Settings** — dark mode, export/import, about
+
+---
+
+## How to deploy
+
+Same steps as Wayfarer:
+
+1. Create a GitHub repo
+2. Upload all 4 files: `index.html`, `manifest.json`, `sw.js`, `README.md`
+3. Settings → Pages → Deploy from `main` branch
+4. Live at `https://YOUR_USERNAME.github.io/divvy/`
+
+---
+
+## How to use
+
+**Create a group:**
+1. Tap **+** → New Group
+2. Enter a name (e.g. "KL Weekend")
+3. Select currency (SGD, MYR, USD, etc.)
+4. Pick a colour
+5. Add member names (type + Enter for each)
+6. Tap Save
+
+**Add an expense:**
+1. Open a group → tap **+**
+2. Pick an icon, enter title and amount
+3. Select who paid
+4. Choose split: **Equal** (divide among selected members) or **Itemised** (enter each person's share)
+5. Tap Save
+
+**Settle up:**
+1. Open a group → **Settle Up** tab
+2. See who owes who, with minimised transactions
+3. Tap ✓ on each transaction as payment is made
+4. Tap **Share via WhatsApp** to send the full summary
+
+---
+
+## Currencies supported
+
+SGD, MYR, USD, EUR, GBP, AUD, JPY, THB, IDR, PHP, HKD, TWD
+
+---
+
+## Bundling with Wayfarer
+
+To bundle Divvy with Wayfarer as a "Travel Toolkit":
+
+1. Deploy Divvy at `yoursite.com/divvy/`
+2. Deploy Wayfarer at `yoursite.com/wayfarer/`
+3. Add cross-links in the home hero of each app
+4. Sell as a bundle — one price for both PWAs
+
+---
+
+## Licence
+
+MIT
