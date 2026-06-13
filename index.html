@@ -2135,13 +2135,17 @@ function registerSW() {
 async function init() {
   await openDB();
   await loadTheme();
-  registerSW();
   await checkOnboarded();
 
   document.getElementById('app').addEventListener('click', e => {
     const card = e.target.closest('[data-expense-id]');
     if (card) { e.stopPropagation(); openExpenseModal(card.dataset.expenseId); }
   });
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .catch(e => console.warn('[SW]', e));
 }
 
 init().catch(console.error);
