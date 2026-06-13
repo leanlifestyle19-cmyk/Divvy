@@ -3,8 +3,8 @@
    Cache-first strategy for offline support
 ══════════════════════════════════════════════════════ */
 
-const CACHE_NAME    = 'divvy-v1';
-const DYNAMIC_CACHE = 'divvy-dynamic-v1';
+const CACHE_NAME    = 'divvy-v2';
+const DYNAMIC_CACHE = 'divvy-dynamic-v2';
 
 const APP_SHELL = [
   './',
