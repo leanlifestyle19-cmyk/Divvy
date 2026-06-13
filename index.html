@@ -2126,7 +2126,7 @@ async function shareSettlement() {
 ══════════════════════════════════════════════════════ */
 function registerSW() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
       .then(() => console.log('[Divvy] SW registered'))
       .catch(e => console.warn('[Divvy] SW error:', e));
   }
