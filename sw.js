@@ -1,58 +1,56 @@
-const CACHE = 'divvy-v5';
+const CACHE = 'divvy-v6';
 
-/* Install — cache index.html only, never fail */
 self.addEventListener('install', e => {
   e.waitUntil(
-    fetch('./index.html', { cache: 'reload' })
-      .then(res => caches.open(CACHE).then(c => c.put('./index.html', res)))
-      .catch(() => {}) // never block install
-      .then(() => self.skipWaiting())
+    self.skipWaiting()
   );
 });
 
-/* Activate — clear old caches */
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(
-        keys.filter(k => k !== CACHE).map(k => caches.delete(k))
-      ))
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
-/* Fetch — serve from cache, update in background */
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
-  /* Navigation (opening the app) → serve index.html from cache */
+  const url = new URL(e.request.url);
+
+  // Navigation: cache the page and serve it
   if (e.request.mode === 'navigate') {
     e.respondWith(
-      caches.match('./index.html').then(cached => {
-        const networkFetch = fetch(e.request)
-          .then(res => {
-            caches.open(CACHE).then(c => c.put('./index.html', res.clone()));
-            return res;
-          })
-          .catch(() => cached);
-        return cached || networkFetch;
-      })
+      fetch(e.request)
+        .then(res => {
+          // Cache a fresh copy every time we have internet
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request.url, clone));
+          return res;
+        })
+        .catch(() => {
+          // Offline — serve from cache
+          return caches.match(e.request.url)
+            .then(cached => cached || caches.match(self.registration.scope + 'index.html'))
+            .then(cached => cached || new Response('Offline - please open with internet first', {
+              status: 503, headers: { 'Content-Type': 'text/plain' }
+            }));
+        })
     );
     return;
   }
 
-  /* Everything else — cache first, network fallback, cache the result */
+  // All other resources
   e.respondWith(
-    caches.match(e.request).then(cached => {
+    caches.match(e.request.url).then(cached => {
       if (cached) return cached;
-      return fetch(e.request)
-        .then(res => {
-          if (res && res.status === 200) {
-            caches.open(CACHE).then(c => c.put(e.request, res.clone()));
-          }
-          return res;
-        })
-        .catch(() => caches.match('./index.html'));
+      return fetch(e.request).then(res => {
+        if (res && res.status === 200) {
+          caches.open(CACHE).then(c => c.put(e.request.url, res.clone()));
+        }
+        return res;
+      }).catch(() => new Response('', { status: 408 }));
     })
   );
 });
