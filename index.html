@@ -580,6 +580,33 @@ if ('caches' in window) {
   </div>
 </div>
 
+<!-- BACKUP MODAL -->
+<div class="modal-overlay" id="backup-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Back Up Your Data 💾</div>
+    <p style="font-size:14px;color:var(--text-3);line-height:1.6;margin-bottom:16px">
+      Save all your data to a file on your phone. Use this before clearing the app or switching devices.
+    </p>
+    <button class="btn btn-primary btn-full" onclick="backupData()">
+      💾 Download Backup File
+    </button>
+    <div style="margin:16px 0;border-top:1px solid var(--border);padding-top:16px">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">Restore from backup</div>
+      <p style="font-size:13px;color:var(--text-3);line-height:1.6;margin-bottom:10px">
+        This will add all data from your backup file. Your existing data will not be deleted.
+      </p>
+      <label style="display:flex;align-items:center;justify-content:center;gap:8px;
+        border:2px dashed var(--border);border-radius:var(--radius);padding:16px;
+        cursor:pointer;color:var(--text-3);font-weight:600;font-size:14px">
+        📂 Choose Backup File
+        <input type="file" accept=".json" style="display:none" onchange="restoreData(this)">
+      </label>
+    </div>
+    <button class="btn btn-ghost btn-full" onclick="closeBackupModal()">Close</button>
+  </div>
+</div>
+
 <!-- HELP MODAL -->
 <div class="modal-overlay" id="help-modal">
   <div class="modal">
@@ -2011,6 +2038,17 @@ async function renderSettings() {
   </div>
 
   <div class="settings-group">
+    <div class="settings-label">Your Data</div>
+    <div class="settings-row" style="cursor:pointer" onclick="openBackupModal()">
+      <div class="settings-row-left">
+        <div class="settings-row-title">💾 Back Up My Data</div>
+        <div class="settings-row-sub">Save all data to a file on your phone</div>
+      </div>
+      <span style="color:var(--text-muted);font-size:18px">→</span>
+    </div>
+  </div>
+
+    <div class="settings-group">
     <div class="settings-label">Help</div>
     <div class="settings-row" style="cursor:pointer" onclick="openHelpModal()">
       <div class="settings-row-left">
@@ -2206,13 +2244,52 @@ function setRating(val) {
 }
 function submitFeedback() {
   if (!_rating) { showToast('Please select a star rating'); return; }
-  const comment = document.getElementById('feedback-comment').value.trim();
-  const stars   = '⭐'.repeat(_rating);
-  const subject = encodeURIComponent('Divvy Feedback — ' + stars + ' (' + _rating + '/5)');
-  const body    = encodeURIComponent('Rating: ' + stars + ' (' + _rating + '/5)' + (comment ? '\n\nComments:\n' + comment : ''));
-  window.open('mailto:' + FEEDBACK_EMAIL + '?subject=' + subject + '&body=' + body);
+  const comment  = document.getElementById('feedback-comment').value.trim();
+  const subject  = 'Divvy Feedback - ' + _rating + ' out of 5 stars';
+  const lines    = ['App: Divvy', 'Rating: ' + _rating + '/5 stars'];
+  if (comment) lines.push('', 'Comments:', comment);
+  const mailtoUrl = 'mailto:' + FEEDBACK_EMAIL
+    + '?subject=' + encodeURIComponent(subject)
+    + '&body='    + encodeURIComponent(lines.join('\n'));
+  window.open(mailtoUrl);
   closeFeedbackModal();
   showToast('Thanks for your feedback! 🙏');
+}
+
+/* ══════════════════════════════════════════════════════
+   DATA BACKUP
+══════════════════════════════════════════════════════ */
+function openBackupModal()  { document.getElementById('backup-modal').classList.add('show'); }
+function closeBackupModal() { document.getElementById('backup-modal').classList.remove('show'); }
+
+async function backupData() {
+  try {
+    const [groups, expenses, settled] = await Promise.all([Groups.getAll(), Expenses.getAll(), Settled.getAll()]);
+    const blob = new Blob([JSON.stringify({
+      version:1, app:'Divvy',
+      exportedAt: new Date().toISOString(), groups, expenses, settled
+    }, null, 2)], { type:'application/json' });
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: 'divvy-backup-' + new Date().toISOString().slice(0,10) + '.json'
+    });
+    a.click(); URL.revokeObjectURL(a.href);
+    showToast('✅ Backup saved to your downloads!');
+  } catch(e) { showToast('❌ Backup failed: ' + e.message); }
+}
+
+async function restoreData(input) {
+  const file = input.files[0]; if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!data.groups) throw new Error('Invalid backup file');
+    let count = 0;
+    for (const g of data.groups)   { if (!(await Groups.get(g.id).catch(()=>null)))   { await Groups.put(g); count++; } }
+    for (const e of data.expenses) { if (!(await Expenses.get(e.id).catch(()=>null))) await Expenses.put(e); }
+    for (const s of (data.settled||[])) { if (!(await Settled.get(s.id).catch(()=>null))) await Settled.put(s); }
+    closeBackupModal(); showToast('✅ Restored ' + count + ' group' + (count!==1?'s':'') + '!'); navigate('home',{});
+  } catch(e) { showToast('❌ Restore failed: ' + e.message); }
+  input.value = '';
 }
 
 async function init() {
