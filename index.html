@@ -431,7 +431,27 @@ ul,ol{list-style:none}
   border:1.5px solid var(--border);font-size:14px;flex:0 0 auto;padding:15px 20px}
 .ob-skip{font-size:13px;color:var(--text-muted);padding:4px 8px;
   background:none;border:none;cursor:pointer}
+
+/* ── STAR RATING ── */
+.stars-row{display:flex;gap:8px;justify-content:center;padding:8px 0}
+.star-btn{font-size:36px;background:none;border:none;cursor:pointer;transition:transform .15s;line-height:1;color:var(--text-muted)}
+.star-btn.lit{color:#F59E0B}
+.star-btn:active{transform:scale(1.2)}
 </style>
+<script>
+/* Register SW and pre-cache as early as possible */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+    .catch(function(e){ console.warn('[SW reg]', e); });
+}
+if ('caches' in window) {
+  caches.open('divvy-v5').then(function(cache) {
+    cache.match('./index.html').then(function(hit) {
+      if (!hit) cache.add('./index.html').catch(function(){});
+    });
+  });
+}
+</script>
 </head>
 <body>
 <div id="app">
@@ -537,6 +557,26 @@ ul,ol{list-style:none}
       📤 Share via WhatsApp
     </button>
     <button class="btn btn-ghost btn-full" onclick="closeSettleModal()">Close</button>
+  </div>
+</div>
+
+<!-- FEEDBACK MODAL -->
+<div class="modal-overlay" id="feedback-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Rate Divvy ⭐</div>
+    <p style="font-size:14px;color:var(--text-3);text-align:center;margin-bottom:4px;line-height:1.5">How has Divvy been for you?</p>
+    <div class="stars-row" id="stars-row">
+      <button class="star-btn" data-val="1" onclick="setRating(1)">☆</button>
+      <button class="star-btn" data-val="2" onclick="setRating(2)">☆</button>
+      <button class="star-btn" data-val="3" onclick="setRating(3)">☆</button>
+      <button class="star-btn" data-val="4" onclick="setRating(4)">☆</button>
+      <button class="star-btn" data-val="5" onclick="setRating(5)">☆</button>
+    </div>
+    <div id="star-label" style="text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:12px;min-height:18px"></div>
+    <textarea id="feedback-comment" class="form-input" rows="3" placeholder="Any comments? (optional)" style="font-size:14px;resize:none;margin-bottom:14px"></textarea>
+    <button class="btn btn-primary btn-full" onclick="submitFeedback()">Send Feedback 📤</button>
+    <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="closeFeedbackModal()">Maybe later</button>
   </div>
 </div>
 
@@ -1986,6 +2026,13 @@ async function renderSettings() {
       </div>
       <span style="color:var(--text-muted);font-size:18px">→</span>
     </div>
+    <div class="settings-row" style="cursor:pointer" onclick="openFeedbackModal()">
+      <div class="settings-row-left">
+        <div class="settings-row-title">⭐ Rate Divvy</div>
+        <div class="settings-row-sub">Tell us how we're doing</div>
+      </div>
+      <span style="color:var(--text-muted);font-size:18px">→</span>
+    </div>
   </div>
 
   <div class="settings-group">
@@ -2132,6 +2179,42 @@ function registerSW() {
 /* ══════════════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   FEEDBACK
+══════════════════════════════════════════════════════ */
+const STAR_LABELS = ['','Terrible 😞','Not great 😕',"It's okay 😐",'Pretty good 😊','Amazing! 🤩'];
+const FEEDBACK_EMAIL = 'leanlifestyle19@gmail.com';
+
+let _rating = 0;
+
+function openFeedbackModal() {
+  _rating = 0;
+  document.querySelectorAll('.star-btn').forEach(b => { b.textContent='☆'; b.classList.remove('lit'); });
+  document.getElementById('star-label').textContent = '';
+  document.getElementById('feedback-comment').value = '';
+  document.getElementById('feedback-modal').classList.add('show');
+}
+function closeFeedbackModal() { document.getElementById('feedback-modal').classList.remove('show'); }
+function setRating(val) {
+  _rating = val;
+  document.querySelectorAll('.star-btn').forEach(b => {
+    const v = parseInt(b.dataset.val);
+    b.textContent = v <= val ? '★' : '☆';
+    b.classList.toggle('lit', v <= val);
+  });
+  document.getElementById('star-label').textContent = STAR_LABELS[val];
+}
+function submitFeedback() {
+  if (!_rating) { showToast('Please select a star rating'); return; }
+  const comment = document.getElementById('feedback-comment').value.trim();
+  const stars   = '⭐'.repeat(_rating);
+  const subject = encodeURIComponent('Divvy Feedback — ' + stars + ' (' + _rating + '/5)');
+  const body    = encodeURIComponent('Rating: ' + stars + ' (' + _rating + '/5)' + (comment ? '\n\nComments:\n' + comment : ''));
+  window.open('mailto:' + FEEDBACK_EMAIL + '?subject=' + subject + '&body=' + body);
+  closeFeedbackModal();
+  showToast('Thanks for your feedback! 🙏');
+}
+
 async function init() {
   await openDB();
   await loadTheme();
